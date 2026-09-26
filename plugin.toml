@@ -1,0 +1,103 @@
+id = "nandoroid/hypr-tools"
+name = "NAnDoroid Hypr Tools"
+version = "1.0.0"
+plugin_api = 26
+author = "nandoroid"
+license = "MIT"
+description = "Port of NAnDoroid Overview + Hyprland settings + Keybinds: workspace grid overview, Hyprland visual/layout/input/animations/autostart forms, keybind CRUD."
+tags = ["hyprland", "overview", "keybinds"]
+dependencies = ["hyprctl", "python3"]
+
+# ── Shared plugin settings (seeded into every entry) ──
+[[setting]]
+key = "python_bin"
+type = "string"
+label_key = "settings.python_bin.label"
+description_key = "settings.python_bin.description"
+default = "python3"
+
+[[setting]]
+key = "override_dir"
+type = "string"
+label_key = "settings.override_dir.label"
+description_key = "settings.override_dir.description"
+default = "~/.config/hypr/nandoroid"
+
+[[setting]]
+key = "poll_ms"
+type = "int"
+label_key = "settings.poll_ms.label"
+description_key = "settings.poll_ms.description"
+default = 1500
+min = 500
+max = 10000
+
+# ── Background poller: hyprctl + keybinds → noctalia.state ──
+[[service]]
+id = "hypr-sync"
+entry = "service.luau"
+
+# ── Overview grid panel (port of panels/Overview/Overview.qml) ──
+[[panel]]
+id = "overview"
+entry = "overview.luau"
+width = 960
+height = 700
+placement = "floating"
+position = "center"
+keyboard_focus = "exclusive"
+capture_keys = ["Up", "Down", "Left", "Right", "Return", "Tab"]
+
+  [[panel.setting]]
+  key = "columns"
+  type = "int"
+  label_key = "settings.overview_columns.label"
+  default = 5
+  min = 1
+  max = 10
+
+  [[panel.setting]]
+  key = "rows"
+  type = "int"
+  label_key = "settings.overview_rows.label"
+  default = 2
+  min = 1
+  max = 5
+
+  [[panel.setting]]
+  key = "show_wallpaper"
+  type = "bool"
+  label_key = "settings.overview_show_wallpaper.label"
+  description_key = "settings.overview_show_wallpaper.description"
+  default = false
+
+  [[panel.setting]]
+  key = "show_thumbnails"
+  type = "bool"
+  label_key = "settings.overview_show_thumbnails.label"
+  description_key = "settings.overview_show_thumbnails.description"
+  default = false
+
+# ── Hyprland settings + keybinds panel (port of addon/Hyprland + addon/keybindSetting) ──
+[[panel]]
+id = "hypr-tools"
+entry = "hypr_tools.luau"
+width = 560
+height = 680
+placement = "floating"
+position = "center"
+keyboard_focus = "on_demand"
+
+  [[panel.setting]]
+  key = "default_tab"
+  type = "select"
+  label_key = "settings.default_tab.label"
+  default = "Visual"
+  options = [
+    { value = "Visual", label_key = "settings.default_tab.visual" },
+    { value = "Layout", label_key = "settings.default_tab.layout" },
+    { value = "Input", label_key = "settings.default_tab.input" },
+    { value = "Animations", label_key = "settings.default_tab.animations" },
+    { value = "Autostart", label_key = "settings.default_tab.autostart" },
+    { value = "Keybinds", label_key = "settings.default_tab.keybinds" },
+  ]
