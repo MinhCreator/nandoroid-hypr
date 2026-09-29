@@ -1,0 +1,13 @@
+[[plugin]]
+id = "nandoroid/hypr-tools"
+name = "NAnDoroid Hypr Tools"
+version = "1.0.1"
+updated_at = 1784089364
+added_at = 1783912666
+author = "MinhCreatorVN"
+license = "MIT"
+icon = "at"
+description = "Port of NAnDoroid Hyprland settings + Keybinds: workspace grid overview, Hyprland visual/layout/input/animations/autostart forms, keybind CRUD."
+tags = ["hyprland", "keybinds"]
+deprecated = false
+plugin_api = 26
