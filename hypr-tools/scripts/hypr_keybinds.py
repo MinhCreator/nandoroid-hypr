@@ -70,16 +70,38 @@ BIND_FLAGS_MAP = {
 
 # ── Config Detection ──
 
-def get_hypr_config_dir() -> Path:
-    """Return ~/.config/hypr/"""
+def get_hypr_config_dir(cli_dir: str = "") -> Path:
+    if cli_dir and cli_dir.strip():
+        return Path(os.path.expanduser(cli_dir.strip()))
     return Path.home() / ".config" / "hypr"
 
-
-def get_override_path(is_lua: bool) -> Path:
+def get_override_path(is_lua: bool, config_dir: Path| None = None, cli_override: str = "") -> Path:
     """Return the user override file path."""
-    base = get_hypr_config_dir() / "nandoroid"
+    if cli_override and cli_override.strip():
+        return Path(os.path.expanduser(cli_override.strip()))
+    base = (config_dir or get_hypr_config_dir()) / "nandoroid"
     ext = ".lua" if is_lua else ".conf"
     return base / f"binds-user{ext}"
+
+# ── Resolve path ──
+def resolve_paths(args):
+    config_dir = get_hypr_config_dir(getattr(args, "config_dir", ""))
+    cli_override = getattr(args, "override_path", "") or ""
+    # When user gives an explicit --override-path, its suffix wins so
+    # read/write stay in the same format even if config_dir is empty/custom.
+    if cli_override.strip():
+        suf = Path(os.path.expanduser(cli_override.strip())).suffix.lower()
+        if suf == ".lua":
+            is_lua = True
+        elif suf == ".conf":
+            is_lua = False
+        else:
+            is_lua = detect_lua_format(config_dir)
+    else:
+        is_lua = detect_lua_format(config_dir)
+    override_path = get_override_path(
+        is_lua, config_dir, cli_override)
+    return config_dir, override_path, is_lua
 
 
 def detect_lua_format(config_dir: Path) -> bool:
@@ -908,10 +930,11 @@ def build_output(binds: list[dict], override_path: Path, is_lua: bool) -> dict:
 
 def cmd_show(args):
     """Parse config and output all keybinds as JSON."""
-    config_dir = get_hypr_config_dir()
-    is_lua = detect_lua_format(config_dir)
-    override_path = get_override_path(is_lua)
-
+    # config_dir = get_hypr_config_dir()
+    # is_lua = detect_lua_format(config_dir)
+    # override_path = get_override_path(is_lua)
+    config_dir, override_path, is_lua = resolve_paths(args)
+    
     lines = read_config_files(config_dir)
     binds = extract_binds_from_lines(lines)
 
@@ -954,10 +977,11 @@ def cmd_show(args):
 
 def cmd_set(args):
     """Add or update a keybind override."""
-    config_dir = get_hypr_config_dir()
-    is_lua = detect_lua_format(config_dir)
-    override_path = get_override_path(is_lua)
-
+    # config_dir = get_hypr_config_dir()
+    # is_lua = detect_lua_format(config_dir)
+    # override_path = get_override_path(is_lua)
+    config_dir, override_path, is_lua = resolve_paths(args)
+    
     # Ensure directory exists
     override_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -985,10 +1009,11 @@ def cmd_set(args):
 
 def cmd_remove(args):
     """Remove a keybind (write unbind override)."""
-    config_dir = get_hypr_config_dir()
-    is_lua = detect_lua_format(config_dir)
-    override_path = get_override_path(is_lua)
-
+    # config_dir = get_hypr_config_dir()
+    # is_lua = detect_lua_format(config_dir)
+    # override_path = get_override_path(is_lua)
+    config_dir, override_path, is_lua = resolve_paths(args)
+    
     override_path.parent.mkdir(parents=True, exist_ok=True)
 
     overrides = read_user_overrides(override_path)
@@ -1001,9 +1026,10 @@ def cmd_remove(args):
 
 def cmd_reset(args):
     """Reset a keybind override (revert to config default)."""
-    config_dir = get_hypr_config_dir()
-    is_lua = detect_lua_format(config_dir)
-    override_path = get_override_path(is_lua)
+    # config_dir = get_hypr_config_dir()
+    # is_lua = detect_lua_format(config_dir)
+    # override_path = get_override_path(is_lua)
+    config_dir, override_path, is_lua = resolve_paths(args)
 
     if not override_path.exists():
         print(json.dumps({"success": True, "key": args.key, "reset": True}))
@@ -1297,8 +1323,9 @@ def main():
     parser = argparse.ArgumentParser(description="Hyprland keybind manager")
     subparsers = parser.add_subparsers(dest="command")
 
-    subparsers.add_parser("show", help="Show all keybinds")
-
+    # subparsers.add_parser("show", help="Show all keybinds")
+    
+    show_p = subparsers.add_parser("show", help="Show all keybinds")
     set_p = subparsers.add_parser("set", help="Set a keybind override")
     set_p.add_argument("key", help="Key combo (e.g. Super+Shift+A)")
     set_p.add_argument("action", help="Dispatcher action (e.g. killactive)")
@@ -1310,7 +1337,11 @@ def main():
 
     rst_p = subparsers.add_parser("reset", help="Reset a keybind to default")
     rst_p.add_argument("key", help="Key combo to reset")
-
+    
+    for sub in (show_p, set_p, rm_p, rst_p):
+        sub.add_argument("--config-dir", default="", help="Hypr config dir, default ~/.config/hypr (empty=fallback)")
+        sub.add_argument("--override-path", default="", help="binds-user file, default <config>/nandoroid/binds-user.* (empty=fallback)")
+    
     args = parser.parse_args()
 
     if args.command == "show":
@@ -1325,6 +1356,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    
 
 if __name__ == "__main__":
     main()

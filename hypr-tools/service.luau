@@ -102,13 +102,31 @@ local function fetchAll()
 	end)
 end
 
+local function trim(s)
+	if type(s) ~= "string" then
+		return ""
+	end
+	return (s:match("^%s*(.-)%s*$") or "")
+end
+
 function fetchBinds()
 	if not noctalia.commandExists(pythonBin) then
 		noctalia.state.set("last_error", pythonBin .. " not found on PATH")
 		fetching = false
 		return
 	end
-	noctalia.runAsync({ pythonBin, scriptPath("hypr_keybinds.py"), "show" }, function(r)
+	local args = { pythonBin, scriptPath("hypr_keybinds.py"), "show" }
+	local op = trim(cfg("keybind_override", ""))
+	if op ~= "" then
+		table.insert(args, "--override-path")
+		table.insert(args, noctalia.expandPath(op))
+	end
+	local cd = trim(cfg("hypr_config_dir", ""))
+	if cd ~= "" then
+		table.insert(args, "--config-dir")
+		table.insert(args, noctalia.expandPath(cd))
+	end
+	noctalia.runAsync(args, function(r)
 		fetching = false
 		if r.exitCode ~= 0 then
 			noctalia.state.set("last_error", "keybinds show failed: " .. (r.stderr or ""))

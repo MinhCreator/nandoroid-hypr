@@ -42,12 +42,65 @@ local function cfg(key, fallback)
 	return v
 end
 
+local function trim(s)
+	if type(s) ~= "string" then
+		return ""
+	end
+	return (s:match("^%s*(.-)%s*$") or "")
+end
+
+-- state (top, next to kbSearch etc.)
+local customOverride = "" -- "" = fallback to cfg("override_dir")
+local customKeybindPath = "" -- "" = fallback to cfg("keybind_override") or auto
+local lastKbOverridePath = "" -- filled from service `binds.overridePath` for placeholder
+
+local function defaultOverrideDir()
+	return cfg("override_dir", "~/.config/hypr/nandoroid")
+end
+
+local function resolveOverrideDir()
+	local v = trim(customOverride)
+	if v == "" then
+		v = cfg("override_dir", "~/.config/hypr/nandoroid")
+	end
+	if v == nil or v == "" then
+		v = "~/.config/hypr/nandoroid"
+	end
+	return noctalia.expandPath(v)
+end
+
+local function resolveKeybindPath() -- nil = let python auto-detect
+	local v = trim(customKeybindPath)
+	if v == "" then
+		v = cfg("keybind_override", "")
+	end
+	if v == nil or trim(v) == "" then
+		return nil
+	end
+	return noctalia.expandPath(trim(v))
+end
+
+local function withKbPathArgs(args)
+	local p = resolveKeybindPath()
+	if p ~= nil then
+		table.insert(args, "--override-path")
+		table.insert(args, p)
+	end
+	local cd = cfg("hypr_config_dir", "")
+	if cd ~= nil and trim(cd) ~= "" then
+		table.insert(args, "--config-dir")
+		table.insert(args, noctalia.expandPath(trim(cd)))
+	end
+	return args
+end
+
 local function pythonBin()
 	return cfg("python_bin", "python3")
 end
 
 local function overrideDir()
-	return noctalia.expandPath(cfg("override_dir", "~/.config/hypr/nandoroid"))
+	-- return noctalia.expandPath(cfg("override_dir", "~/.config/hypr/nandoroid"))
+	 return resolveOverrideDir()
 end
 
 local function shellOverrideFile()
@@ -176,6 +229,9 @@ local function refreshBindsFromState(v)
 		render()
 		return
 	end
+	if type(v.overridePath) == "string" and v.overridePath ~= "" then
+		lastKbOverridePath = v.overridePath
+	end
 	local binds = v.binds or v
 	if type(binds) ~= "table" then
 		render()
@@ -238,7 +294,8 @@ function kbMutate(mode)
 		if #conflicts > 0 and expandedKey ~= editKey then
 			noctalia.notify("Keybinds", "Overwriting " .. tostring(#conflicts) .. " conflicting bind(s)")
 		end
-		args = { pythonBin(), keybindScript(), "set", editKey, editAction }
+		-- args = { pythonBin(), keybindScript(), "set", editKey, editAction }
+		args = withKbPathArgs({ pythonBin(), keybindScript(), "set", editKey, editAction })
 		if editDesc ~= "" then
 			table.insert(args, "--desc")
 			table.insert(args, editDesc)
@@ -248,9 +305,11 @@ function kbMutate(mode)
 			table.insert(args, editFlags)
 		end
 	elseif mode == "remove" then
-		args = { pythonBin(), keybindScript(), "remove", expandedKey }
+		-- args = { pythonBin(), keybindScript(), "remove", expandedKey }
+		args = withKbPathArgs({ pythonBin(), keybindScript(), "remove", expandedKey })
 	else
-		args = { pythonBin(), keybindScript(), "reset", expandedKey }
+		-- args = { pythonBin(), keybindScript(), "reset", expandedKey }
+		args = withKbPathArgs({ pythonBin(), keybindScript(), "reset", expandedKey })
 	end
 	noctalia.runAsync(args, function(r)
 		if r.exitCode ~= 0 then
@@ -265,7 +324,7 @@ end
 
 -- ── Small ui builders ──
 local function sectionTitle(glyph, text)
-	return ui.row({ gap = 8, align = "center" }, {
+	return ui.row({ gap = 5, align = "center" }, {
 		ui.glyph({ name = glyph, size = 18, color = "primary" }),
 		ui.label({ text = text, fontSize = 15, fontWeight = "bold" }),
 	})
@@ -297,10 +356,51 @@ local function stepperRow(label, value, minV, maxV, step, fmt, onPick)
 	})
 end
 
+-- ── Override path rows (empty = default fallback) ──
+local function overridePathRow()
+	local placeholder = noctalia.expandPath(defaultOverrideDir())
+	return ui.column({ gap = 4 }, {
+		ui.label({ text = noctalia.tr("hypr.override_dir_title"), fontWeight = "bold" }),
+		ui.row({ gap = 8, align = "center" }, {
+			ui.input({
+				value = customOverride,
+				placeholder = placeholder,
+				onChange = "onOverrideChange",
+				onSubmit = "onOverrideSubmit",
+				flexGrow = 1,
+			}),
+			ui.button({ text = noctalia.tr("hypr.reset"), variant = "ghost", controlSize = "sm", onClick = "onOverrideClear" }),
+		}),
+		ui.label({ text = noctalia.tr("hypr.override_effective") .. " " .. resolveOverrideDir(), fontSize = 11 }),
+	})
+end
+
+local function keybindPathRow()
+	local ph = lastKbOverridePath
+	if ph == "" then
+		ph = noctalia.expandPath("~/.config/hypr/nandoroid/binds-user.lua")
+	end
+	return ui.column({ gap = 4 }, {
+		ui.label({ text = noctalia.tr("hypr.keybind_override_title"), fontWeight = "bold" }),
+		ui.row({ gap = 8, align = "center" }, {
+			ui.input({
+				value = customKeybindPath,
+				placeholder = ph,
+				onChange = "onKbOverrideChange",
+				onSubmit = "onKbOverrideSubmit",
+				flexGrow = 1,
+			}),
+			ui.button({ text = noctalia.tr("hypr.reset"), variant = "ghost", controlSize = "sm", onClick = "onKbOverrideClear" }),
+		}),
+		ui.label({ text = noctalia.tr("hypr.override_empty_hint"), fontSize = 11 }),
+	})
+end
+
 -- ── Tab bodies ──
 local function visualTab()
 	return {
 		sectionTitle("deblur", noctalia.tr("hypr.visual_title")),
+		overridePathRow(),
 		stepperRow("Rounding", F.rounding, 0, 100, 1, tostring, function(v)
 			F.rounding = math.floor(v)
 			hyprSet("decoration:rounding", math.floor(v))
@@ -573,8 +673,9 @@ local function keybindsTab()
 	end
 	local rows = {
 		sectionTitle("keyboard", noctalia.tr("hypr.keybinds_title")),
+		keybindPathRow(),
 		ui.row({ gap = 8, align = "center" }, {
-			ui.input({ value = kbSearch, placeholder = "Search key / action / description", onChange = "onKbSearch" }),
+			ui.input({ value = kbSearch, placeholder = "Search key / action / description", onChange = "onKbSearch", flexGrow = 1 }),
 			ui.button({ text = showNew and "Cancel" or "New", variant = "primary", controlSize = "sm", onClick = "onKbToggleNew" }),
 		}),
 		ui.select({
@@ -667,6 +768,30 @@ function onKbCollapse()
 	render()
 end
 
+function onOverrideChange(v)
+	customOverride = trim(v)
+end
+function onOverrideSubmit(v)
+	customOverride = trim(v)
+	render()
+end
+function onOverrideClear()
+	customOverride = ""
+	render()
+end
+
+function onKbOverrideChange(v)
+	customKeybindPath = trim(v)
+end
+function onKbOverrideSubmit(v)
+	customKeybindPath = trim(v)
+	render()
+end
+function onKbOverrideClear()
+	customKeybindPath = ""
+	render()
+end
+
 function switchTab(name)
 	tab = name
 	render()
@@ -702,7 +827,7 @@ function render()
 		body = keybindsTab()
 	end
 	table.insert(body, 1, ui.row({ gap = 6 }, bar))
-	table.insert(body, ui.row({ gap = 8, align = "center", justify = "space_between" }, {
+	table.insert(body, ui.row({ gap = 5, align = "center", justify = "space_between" }, {
 		ui.label({ text = "override: " .. overrideDir(), fontSize = 10 }),
 		ui.button({ glyph = "close", variant = "ghost", controlSize = "sm", onClick = "closeMe" }),
 	}))
@@ -715,6 +840,8 @@ end
 
 function onOpen(_context)
 	tab = cfg("default_tab", "Visual")
+	customOverride = ""
+	customKeybindPath = ""
 	loadAutostart()
 	refreshBindsFromState(noctalia.state.get("binds"))
 	seedLiveValues()

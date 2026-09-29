@@ -4,8 +4,8 @@ version = "1.0.0"
 plugin_api = 26
 author = "nandoroid"
 license = "MIT"
-description = "Port of NAnDoroid Overview + Hyprland settings + Keybinds: workspace grid overview, Hyprland visual/layout/input/animations/autostart forms, keybind CRUD."
-tags = ["hyprland", "overview", "keybinds"]
+description = "Port of NAnDoroid Hyprland settings + Keybinds: workspace grid overview, Hyprland visual/layout/input/animations/autostart forms, keybind CRUD."
+tags = ["hyprland", "keybinds"]
 dependencies = ["hyprctl", "python3"]
 
 # ── Shared plugin settings (seeded into every entry) ──
@@ -16,12 +16,27 @@ label_key = "settings.python_bin.label"
 description_key = "settings.python_bin.description"
 default = "python3"
 
+# ── Override dir for hypr settings ──
 [[setting]]
 key = "override_dir"
 type = "string"
 label_key = "settings.override_dir.label"
 description_key = "settings.override_dir.description"
 default = "~/.config/hypr/nandoroid"
+
+[[setting]]
+key = "hypr_config_dir"
+type = "string"
+label_key = "settings.hypr_config_dir.label"
+description_key = "settings.hypr_config_dir.description"
+default = "~/.config/hypr"
+
+[[setting]]
+key = "keybind_override"
+type = "string"
+label_key = "settings.keybind_override.label"
+description_key = "settings.keybind_override.description"
+default = ""
 
 [[setting]]
 key = "poll_ms"
@@ -37,53 +52,12 @@ max = 10000
 id = "hypr-sync"
 entry = "service.luau"
 
-# ── Overview grid panel (port of panels/Overview/Overview.qml) ──
-[[panel]]
-id = "overview"
-entry = "overview.luau"
-width = 960
-height = 700
-placement = "floating"
-position = "center"
-keyboard_focus = "exclusive"
-capture_keys = ["Up", "Down", "Left", "Right", "Return", "Tab"]
-
-  [[panel.setting]]
-  key = "columns"
-  type = "int"
-  label_key = "settings.overview_columns.label"
-  default = 5
-  min = 1
-  max = 10
-
-  [[panel.setting]]
-  key = "rows"
-  type = "int"
-  label_key = "settings.overview_rows.label"
-  default = 2
-  min = 1
-  max = 5
-
-  [[panel.setting]]
-  key = "show_wallpaper"
-  type = "bool"
-  label_key = "settings.overview_show_wallpaper.label"
-  description_key = "settings.overview_show_wallpaper.description"
-  default = false
-
-  [[panel.setting]]
-  key = "show_thumbnails"
-  type = "bool"
-  label_key = "settings.overview_show_thumbnails.label"
-  description_key = "settings.overview_show_thumbnails.description"
-  default = false
-
 # ── Hyprland settings + keybinds panel (port of addon/Hyprland + addon/keybindSetting) ──
 [[panel]]
 id = "hypr-tools"
 entry = "hypr_tools.luau"
-width = 560
-height = 680
+width = 600
+height = 800
 placement = "floating"
 position = "center"
 keyboard_focus = "on_demand"

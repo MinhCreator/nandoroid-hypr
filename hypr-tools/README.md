@@ -9,7 +9,7 @@ plugin (one plugin, 3 entries), per `todo/port-to-noctalia-plugin.md`.
 nandoroid-hypr/
   plugin.toml          # id nandoroid/hypr-tools, plugin_api 26
   service.luau         # [[service]] hypr-sync: hyprctl + keybinds poll → noctalia.state
-  overview.luau        # [[panel]] overview: workspace grid + search + move
+[-][removed] overview.luau        # [[panel]] overview: workspace grid + search + move
   hypr_tools.luau      # [[panel]] hypr-tools: Visual/Layout/Input/Animations/Autostart/Keybinds
   scripts/             # bundled Python helpers (argv form, plugin_api 24)
     hyprconfigurator.py
@@ -20,10 +20,10 @@ nandoroid-hypr/
 
 ## Source mapping
 
-| NAnDoroid | This plugin |
-|---|---|
-| `panels/Overview/Overview.qml` grid, fuzzy (`fuzzyMatch/fuzzyScore`), keyboard nav, `movetoworkspacesilent` | `overview.luau`: Luau fuzzy port, `capture_keys` arrows/Return/Tab, `ui.dragSource/ui.dropZone` + select-then-tap move fallback |
-| `OverviewPopup.qml` Overlay/Exclusive, tap-outside | Host-owned: floating panel + outside-click dismiss + `keyboard_focus="exclusive"` |
+| NAnDoroid | This plugin | Available |
+|---|---|---|
+| `panels/Overview/Overview.qml` grid, fuzzy (`fuzzyMatch/fuzzyScore`), keyboard nav, `movetoworkspacesilent` | `overview.luau`: Luau fuzzy port, `capture_keys` arrows/Return/Tab, `ui.dragSource/ui.dropZone` + select-then-tap move fallback | REMOVED |
+| `OverviewPopup.qml` Overlay/Exclusive, tap-outside | Host-owned: floating panel + outside-click dismiss + `keyboard_focus="exclusive"` | REMOVED |
 | `services/HyprlandData.qml` hyprctl poll | `service.luau` sequential `hyprctl -j` chain → `state.set` |
 | `addon/Hyprland/HyprlandSettings.qml` + HyprLayout/Input/Visual/Autostart/Animations | `hypr_tools.luau` tabs; live `hyprctl keyword` + `hyprconfigurator.py --file <override> --set` / `--anim-preset` |
 | `addon/services/HyprlandConfig.qml` set/setMany/reset | `hyprSet()` in `hypr_tools.luau` (BOOL_KEYS mapping lives in the Python script) |
@@ -37,7 +37,7 @@ nandoroid-hypr/
 ```bash
 # dev source override (Noctalia reads path sources with .luau hot-reload)
 # point your plugin source at this dir, then:
-noctalia msg panel-toggle nandoroid/hypr-tools:overview
+[ REMOVED ] noctalia msg panel-toggle nandoroid/hypr-tools:overview
 noctalia msg panel-toggle nandoroid/hypr-tools:hypr-tools
 ```
 
